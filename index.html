@@ -1,0 +1,106 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Donation Site</title>
+  <meta name="description" content="The HTML5 Herald">
+  <meta name="author" content="SitePoint">
+
+  <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+  <h1>Donation page</h1>
+  <div id="container" style="position: relative">
+      <img id="image" style="position: absolute">
+	  <div id="buttons" style="position: absolute">
+      </div>
+  </div>
+  
+  <script>
+      ////// can be changed: ///////
+	  var lowerLimit = 1;
+	  var upperLimit = 210;
+	  var doneAmounts = [5,6,10,300];
+	  var elementsByRow = 15;
+	  var backgroundImage = 'background.jpg';
+	  var currency = '$';
+	  var fontSize = '10px'
+	  /////////////////////////////
+	  
+	  
+	  var clickedAmounts = [5,7,100,101,200]; //TODO get from cloud service
+	  var btnMarginPx = 2;
+	  var imageW, imageH, btnW, btnH;
+	  document.getElementById("image").src = backgroundImage;
+	  document.getElementById("image").onload = init;
+	  
+	  function init() {
+		  imageW = getW(document.getElementById("image"));
+		  imageH = getH(document.getElementById("image"));
+		  btnW = (imageW - btnMarginPx) / elementsByRow;
+		  btnH = (imageH - btnMarginPx) / Math.ceil((upperLimit-lowerLimit+1)/elementsByRow);
+		  
+		  generateButtons();
+	  }
+	  
+	  function getW(element) {
+		  return element.getBoundingClientRect().width;
+	  }
+	  
+	  function getH(element) {
+		  return element.getBoundingClientRect().height;
+	  }
+	  
+	  function buttonClicked(element) {
+		  if(element.classList.contains('done')) return;
+		  
+		  
+		  var isClicked = element.classList.contains('clicked');
+		  
+		  if(!isClicked) {
+			  if(!confirm("Do you want to spend the amount of " + element.id + currency + "? Clicking on 'OK' will mark this amount as done.")) {
+				  return;
+			  }
+			  element.classList.add('clicked');
+		  } else {
+			  if(confirm("Do you really want to unmark the amount " + element.id + currency + "? Please only do this if you clicked on this button before and you now decided to not spend the money.")) {
+				  element.classList.remove('clicked');
+			  }
+		  }
+		  //TODO save to cloud service
+	  }
+  
+	  function generateButtons() {
+		  var time = new Date().getTime();
+		  var newHtml = '';
+		  for (var i = lowerLimit; i<=upperLimit; i++) {
+			 var buttonHtml = '<button id="' + i + '" onclick="buttonClicked(this)"><span>' + i + ' ' + currency + '</span></button>';
+			 newHtml += buttonHtml;
+			 if (i % elementsByRow == 0) newHtml += '</br>';
+			 document.getElementById('buttons').innerHTML = newHtml;
+		  }
+		  
+		  var wPx = (btnW -  2*btnMarginPx) + "px";
+		  var hPx = (btnH -  2*btnMarginPx) + "px";
+		  var fontPx = fontSize || ((btnH -  2*btnMarginPx)/2) + "px";
+		  for (var i = lowerLimit; i<=upperLimit; i++) {
+			 var newBtn = document.getElementById(i);
+			 newBtn.style.width = wPx;
+			 newBtn.style.height = hPx;
+			 newBtn.style.fontSize = fontPx;
+			 if(doneAmounts.indexOf(i) !== -1) {
+				 newBtn.classList.add('done');
+			 } else if (clickedAmounts.indexOf(i) !== -1) {
+				 newBtn.classList.add('clicked');
+			 }
+		  }
+		  console.log("generation took: " + (new Date().getTime() - time) + "ms");
+	  }
+	  
+  </script>
+</body>
+</html>

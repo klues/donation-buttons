@@ -1,0 +1,11 @@
+button {
+   margin: 2px;
+}
+
+button.clicked {
+	opacity: 0.5;
+}
+
+button.done {
+	opacity: 0 !important;
+}
