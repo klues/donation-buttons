@@ -1,5 +1,6 @@
 window.storageService = {};
 storageService.marked = [5, 7, 100, 101, 200];
+storageService.updateHanlder = null;
 
 storageService.getClickedAmounts = function () {
     return new Promise(function (resolve) {
@@ -25,6 +26,10 @@ storageService.unmarkAmount = function (amount) {
     saveToCloudInternal();
 };
 
+storageService.setUpdateHandler = function (fn) {
+    storageService.updateHanlder = fn;
+};
+
 /////////////// change this part if you want to use a different cloud service //////////////////////
 
 function initCloud() {
@@ -38,6 +43,12 @@ function initCloud() {
         messagingSenderId: "58751055932"
     };
     firebase.initializeApp(config);
+    firebase.database().ref(getStorageRef()).on('value', function(snapshot) {
+        storageService.marked = JSON.parse(snapshot.val());
+        if(storageService.updateHanlder) {
+            storageService.updateHanlder(storageService.marked);
+        }
+    });
 }
 initCloud();
 
