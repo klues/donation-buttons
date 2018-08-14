@@ -6,7 +6,9 @@ C.lowerLimit = 1;
 C.upperLimit = 210;
 C.doneAmounts = [5,6,10,300];
 C.elementsByRow = 15;
-C.backgroundImage = 'background.jpg';
-C.currency = '$';
-C.fontSize = '10px';
+C.backgroundImage = 'img/background.jpg';
+C.currency = '';
+C.fontSize = '13px';
+C.redirectOnClickURL = 'https://www.google.at/';
+C.redirectDelayMs = 1000;
 /////////////////////////////
