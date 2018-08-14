@@ -42,13 +42,13 @@ function initCloud() {
 initCloud();
 
 function saveToCloudInternal() {
-    firebase.database().ref(getStorageRef()).set(storageService.marked);
+    firebase.database().ref(getStorageRef()).set(JSON.stringify(storageService.marked));
 }
 
 function getFromCloudInternal() {
     return new Promise(function (resolve) {
         firebase.database().ref(getStorageRef()).once('value').then(function (snapshot) {
-            resolve(snapshot.val());
+            resolve(JSON.parse(snapshot.val()));
         });
     });
 }
