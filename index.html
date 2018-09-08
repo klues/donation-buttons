@@ -9,36 +9,58 @@
     <link rel="stylesheet" href="css/skeleton.css">
 
     <script src="https://www.gstatic.com/firebasejs/5.3.1/firebase.js"></script>
+    <script src="js/dom-i18n.min.js"></script>
 
     <script src="js/config.js"></script>
     <script src="js/storageService.js"></script>
 </head>
 
 <body>
-  <h1>Donation page</h1>
-  <p>
-      This page visualizes donations for the following project:<br/>
-      <span><b>Name:</b> Demo Project</span><br/>
-      <span><b>Description:</b> This project is just a demo.</span>
-  </p>
+  <div id="content" style="display: none">
+      <h1 data-i18n>Donation visualization // Visualisierung von Spenden</h1>
+      <div data-i18n>
+          <p>
+              <span><b>Project name:</b> Demo Project</span><br/>
+              <span><b>Description:</b> This project is just a demo.</span>
+          </p>
+          <p>
+              <span><b>Projektname:</b> Demo Projekt</span><br/>
+              <span><b>Beschreibung:</b> Dieses Projekt ist nur eine Demo.</span>
+          </p>
+      </div>
 
 
-  <div id="container" style="position: relative">
-      <img id="image" style="position: absolute">
-	  <div id="buttons" style="position: absolute">
+
+      <div id="container" style="position: relative">
+          <img id="image" style="position: absolute">
+          <div id="buttons" style="position: absolute">
+          </div>
+      </div>
+
+      <div data-i18n>
+          <div>
+              <h2>How this page works:</h2>
+              <ol>
+                  <li>Every button represents an amount in USD ($) or EUR (€)</li>
+                  <li>Semi-Transparent numbers are already marked as done by some user, transparent spots are verified to be done.</li>
+                  <li>Click on a non-semi-transparent button if you want to donate a specific amount.</li>
+                  <li>You will be redirected to a page with payment information - please choose a payment method and do the donation.</li>
+                  <li>If you decide to not donate an amount you have already clicked on, please re-click the amount to unmark it.</li>
+              </ol>
+          </div>
+          <div>
+              <h2>So funktioniert diese Seite:</h2>
+              <ol>
+                  <li>Jeder Button stellt einen Geldbetrag in Dollar ($) bzw. Euro (€) dar</li>
+                  <li>Halb-transparente Nummern wurden bereits von einer Person als "gespendet" markiert, nicht mehr sichtbare Nummern wurden bereits als "gespendet" bestätigt.</li>
+                  <li>Klicke auf einen nicht transparenten Button, wenn du einen Betrag spenden möchtest.</li>
+                  <li>Du wirst auf eine Seite mit Zahlungsinformationen weitergeleitet, bitte wähle dort die gewünschte Zahlungsart und führe die Spende durch.</li>
+                  <li>Wenn du nachträglich entscheidest einen Betrag doch nicht zu spenden, so klicke bitte erneut auf den entsprechenden Betrag um die Markierung aufzuheben.</li>
+              </ol>
+          </div>
       </div>
   </div>
 
-  <div>
-      <h2>How this page works:</h2>
-      <ol>
-          <li>Every button represents an amount in USD ($) or EUR (€)</li>
-          <li>Semi-Transparent numbers are already marked as done by some user, transparent spots are verified to be done.</li>
-          <li>Click on a non-semi-transparent button if you want to donate a specific amount.</li>
-          <li>You will be redirected to a page with payment information - please choose a payment method and do the donation.</li>
-          <li>If you decide to not donate an amount you have already clicked on, please re-click the amount to unmark it.</li>
-      </ol>
-  </div>
   
   <script>
 	  var btnMarginPx = 2;
@@ -47,7 +69,8 @@
 	  document.getElementById("image").onload = init;
 	  
 	  function init() {
-		  imageW = getW(document.getElementById("image"));
+		  initI18n();
+	      imageW = getW(document.getElementById("image"));
 		  imageH = getH(document.getElementById("image"));
 		  btnW = (imageW - btnMarginPx) / C.elementsByRow;
 		  btnH = (imageH - btnMarginPx) / Math.ceil((C.upperLimit-C.lowerLimit+1)/C.elementsByRow);
@@ -63,7 +86,35 @@
               markButtons(clickedAmounts);
           })
 	  }
-	  
+
+	  function initI18n() {
+          var i18n = window.domI18n({
+              selector: '[data-i18n]',
+              separator: ' // ',
+              languages: ['en', 'de'],
+              defaultLanguage: 'en'
+          });
+          i18n.changeLanguage(getBrowserLang());
+          console.log('using language: ' + getBrowserLang());
+          document.getElementById('content').style.display = "block";
+      }
+
+      function getBrowserLang() {
+          return navigator.language.substring(0,2);
+      }
+
+      function getTranslation(key, replace1, replace2) {
+	      var translations = C.translations[key];
+          if(!translations) return '';
+          var translated = translations[getBrowserLang()];
+          if(!translated) {
+              translated = translations['en']
+          }
+          translated = translated.replace('{0}', replace1);
+          translated = translated.replace('{1}', replace2);
+	      return translated;
+      }
+
 	  function getW(element) {
 		  return element.getBoundingClientRect().width;
 	  }
@@ -79,19 +130,20 @@
 		  var isClicked = element.classList.contains('clicked');
 		  
 		  if(!isClicked) {
-			  if(!confirm("Do you want to spend the amount of " + element.id + C.currency + "? Clicking on 'OK' will mark this amount as done and redirect you to a page with payment information.")) {
+			  if(!confirm(getTranslation('confirmDonate', element.id, C.currency))) {
 				  return;
 			  }
 			  element.classList.add('clicked');
               storageService.markAmount(parseInt(element.id));
-              if(C.redirectOnClickURL) {
+              if(C.redirectAfterClick) {
+                  var url = getTranslation('redirectURL');
                   var delay = C.redirectDelayMs === parseInt(C.redirectDelayMs, 10) ? C.redirectDelayMs : 1000;
                   setTimeout(function () {
-                      window.location.href = C.redirectOnClickURL;
+                      window.location.href = url;
                   }, delay);
               }
 		  } else {
-			  if(confirm("Do you really want to unmark the amount " + element.id + C.currency + "? Please only do this if you clicked on this button before and you now decided to not spend the money.")) {
+			  if(confirm(getTranslation('confirmUndo', element.id, C.currency))) {
 				  element.classList.remove('clicked');
                   storageService.unmarkAmount(parseInt(element.id));
 			  }
