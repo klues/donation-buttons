@@ -1,0 +1,275 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Donation Page</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/skeleton.css">
+
+    <script src="https://www.gstatic.com/firebasejs/5.3.1/firebase.js"></script>
+    <script src="../js/dom-i18n.min.js"></script>
+
+    <script src="config.js"></script>
+    <script src="../js/storageService.js"></script>
+</head>
+
+<body>
+    <div id="disabledMessage" style="display: none">
+        <p>
+            This project is currently disabled. Go to <i>config.js</i> and set <i>C.projectEnabled = true</i> to enable it.
+        </p>
+    </div>
+    <div id="content" style="display: none">
+      <div class="row">
+          <h1 class="four columns" data-i18n>Donation visualization // Visualisierung von Spenden // Lahjoitussivu // Donations sida</h1>
+          <div class="five columns">
+              <span data-i18n>Language // Sprache // Kieli // Språk</span>  <span> </span>
+              <select id="selectLang" onchange="chooseLang(event)">
+                  <option value="en">English</option>
+                  <option value="fi">Finnish</option>
+                  <option value="sv">Swedish</option>
+                  <option value="de">German</option>
+              </select>
+          </div>
+      </div>
+
+      <div data-i18n class="text">
+          <p>
+              <span><b>Project name:</b> (Empty)</span><br/>
+              <span><b>Description:</b> (Empty)</span>
+          </p>
+          <p>
+              <span><b>Projektname:</b> (Leer)</span><br/>
+              <span><b>Beschreibung:</b> (Leer)</span>
+          </p>
+	      <p>
+              <span><b>Projektin nimi:</b> (Empty)</span><br/>
+              <span><b>Selitys:</b> (Empty)</span>
+          </p>
+          <p>
+              <span><b>Projekt namn:</b> (Empty)</span><br/>
+              <span><b>Beskrivning:</b> (Empty)</span>
+          </p>
+      </div>
+
+
+
+      <div id="container" style="position: relative">
+          <img id="image" style="position: absolute; max-width: 95%">
+          <div id="buttons" style="position: absolute">
+          </div>
+      </div>
+
+      <div data-i18n class="text">
+          <div>
+              <h2>How this page works:</h2>
+              <ol>
+                  <li>Every button represents an amount in USD ($) or EUR (€)</li>
+                  <li>Semi-Transparent numbers are already marked as done by some user, transparent spots are verified to be done.</li>
+                  <li>Click on a non-semi-transparent button if you want to donate a specific amount.</li>
+                  <li>You will be redirected to a page with payment information - please choose a payment method and do the donation.</li>
+                  <li>If you decide to not donate an amount you have already clicked on, please re-click the amount to unmark it.</li>
+              </ol>
+          </div>
+          <div>
+              <h2>So funktioniert diese Seite:</h2>
+              <ol>
+                  <li>Jeder Button stellt einen Geldbetrag in Dollar ($) bzw. Euro (€) dar</li>
+                  <li>Halb-transparente Nummern wurden bereits von einer Person als "gespendet" markiert, nicht mehr sichtbare Nummern wurden bereits als "gespendet" bestätigt.</li>
+                  <li>Klicke auf einen nicht transparenten Button, wenn du einen Betrag spenden möchtest.</li>
+                  <li>Du wirst auf eine Seite mit Zahlungsinformationen weitergeleitet, bitte wähle dort die gewünschte Zahlungsart und führe die Spende durch.</li>
+                  <li>Wenn du nachträglich entscheidest einen Betrag doch nicht zu spenden, so klicke bitte erneut auf den entsprechenden Betrag um die Markierung aufzuheben.</li>
+              </ol>
+          </div>
+          <div>
+              <h2>Näin lahjoitat:</h2>
+              <ol>
+                  <li>Jokainen ruutu kuvaa kyseistä summaa euroissa tai dollareissa (USD). </li>
+                  <li>Puoliläpinäkyvät numerot ovat jo valittuja jonkun lahjoittajan toimesta, poistetut ruudut ovat niitä, jotka lahjoittajat ovat jo maksaneet.</li>
+                  <li>Klikkaa ei-läpinäkyvää ruutua, jos haluat lahjoittaa tietyn summan.</li>
+                  <li>Sinut ohjataan sivulle, jossa on maksutiedot- ole hyvä ja valitse maksutapa ja tee lahjoitus.</li>
+                  <li>Jos päätätkin olla lahjoittamatta summaa, jonka olet jo valinnut, klikkaa ruutua uudestaan poistaaksesi valinnan.</li>
+              </ol>
+          </div>
+          <div>
+              <h2>Så här donerar du:</h2>
+              <ol>
+                  <li>Varje box representerar sin summa i € (10 X summan i SEK)</li>
+                  <li>Du kan välja vilket nummer som helst för att donera summan, dock inte de genomskinliga, för de är redan reserverade.</li>
+                  <li>Efter att du klickat på numret kommer du bli vidaresänd till donations informations sidan, välj din metod och donera.</li>
+                  <li>Om du vill avbryta din donation, så ber vi dig återigen klicka på samma box, för att ta bort reservationen.</li>
+              </ol>
+          </div>
+      </div>
+        <div style="margin-top: 2em; font-size: 0.7em">
+            Not confirmed amounts: <span id="markedInfo"></span>
+        </div>
+  </div>
+
+  
+  <script>
+	  if(!C.projectEnabled) {
+          document.getElementById('disabledMessage').style.display = "block";
+      } else {
+          var btnMarginPx = 2;
+          var imageW, imageH, btnW, btnH;
+          document.getElementById("image").src = C.backgroundImage;
+          document.getElementById("image").onload = init;
+          window.onresize = function(event) {
+              if(window.initTimeoutHandler) {
+                  clearTimeout(window.initTimeoutHandler)
+              }
+              window.initTimeoutHandler = setTimeout(function () {
+                  calcSizes();
+                  resizeButtons();
+              }, 100);
+          };
+      }
+
+	  function init() {
+		  initI18n();
+	      calcSizes();
+		  generateButtons();
+          storageService.getClickedAmounts().then(function (clickedAmounts) {
+              console.log('clicked got from cloud storage: ' + clickedAmounts);
+              markButtons(clickedAmounts);
+          });
+          storageService.setUpdateHandler(function (clickedAmounts) {
+              console.log('clicked got from cloud storage: ' + clickedAmounts);
+              var notConfirmed = clickedAmounts.filter(function(elem) {
+                  return !C.doneAmounts.includes(elem);
+              });
+              notConfirmed = notConfirmed.sort(function(a,b) {
+                  return a - b;
+              });
+              document.getElementById('markedInfo').innerHTML = JSON.stringify(notConfirmed);
+              markButtons(clickedAmounts);
+          })
+	  }
+
+	  function calcSizes() {
+          imageW = getW(document.getElementById("image"));
+          imageH = getH(document.getElementById("image"));
+          btnW = (imageW - btnMarginPx) / C.elementsByRow - 0.5;
+          btnH = (imageH - btnMarginPx) / Math.ceil((C.upperLimit-C.lowerLimit+1)/C.elementsByRow) - 0.5;
+          document.getElementById('container').style.height = imageH + 'px';
+          var texts = document.getElementsByClassName('text');
+          for(var i=0; i<texts.length; i++) {
+              texts[i].style.maxWidth = imageW + 'px';
+          }
+      }
+
+	  function initI18n() {
+          window.i18n = window.domI18n({
+              selector: '[data-i18n]',
+              separator: ' // ',
+              languages: ['en', 'de', 'fi', 'sv'],
+              defaultLanguage: 'en'
+          });
+          window.i18n.changeLanguage(getLang());
+          console.log('using language: ' + getLang());
+          document.getElementById('content').style.display = "block";
+          document.getElementById('selectLang').value = getLang();
+      }
+
+      function getLang() {
+          var lang = window.chosenLang || navigator.language.substring(0,2);
+          return lang;
+      }
+
+      function chooseLang(event) {
+	      window.chosenLang = event.target.value;
+          window.i18n.changeLanguage(getLang());
+      }
+
+      function getTranslation(key, replace1, replace2) {
+	      var translations = C.translations[key];
+          if(!translations) return '';
+          var translated = translations[getLang()];
+          if(!translated) {
+              translated = translations['en']
+          }
+          translated = translated.replace('{0}', replace1);
+          translated = translated.replace('{1}', replace2);
+	      return translated;
+      }
+
+	  function getW(element) {
+		  return element.getBoundingClientRect().width;
+	  }
+	  
+	  function getH(element) {
+		  return element.getBoundingClientRect().height;
+	  }
+	  
+	  function buttonClicked(element) {
+		  if(element.classList.contains('done')) return;
+		  
+		  
+		  var isClicked = element.classList.contains('clicked');
+		  
+		  if(!isClicked) {
+			  if(!confirm(getTranslation('confirmDonate', element.id, C.currency))) {
+				  return;
+			  }
+			  element.classList.add('clicked');
+              storageService.markAmount(parseInt(element.id));
+              if(C.redirectAfterClick) {
+                  var url = getTranslation('redirectURL');
+                  var delay = C.redirectDelayMs === parseInt(C.redirectDelayMs, 10) ? C.redirectDelayMs : 1000;
+                  setTimeout(function () {
+                      window.location.href = url;
+                  }, delay);
+              }
+		  } else {
+			  if(confirm(getTranslation('confirmUndo', element.id, C.currency))) {
+				  element.classList.remove('clicked');
+                  storageService.unmarkAmount(parseInt(element.id));
+			  }
+		  }
+	  }
+  
+	  function generateButtons() {
+		  var time = new Date().getTime();
+		  var newHtml = '';
+		  for (var i = C.lowerLimit; i<=C.upperLimit; i++) {
+			 var buttonHtml = '<button id="' + i + '" onclick="buttonClicked(this)"><span>' + i + ' ' + C.currency + '</span></button>';
+			 newHtml += buttonHtml;
+			 if (i % C.elementsByRow == 0) newHtml += '</br>';
+			 document.getElementById('buttons').innerHTML = newHtml;
+		  }
+		  
+		  resizeButtons();
+		  console.log("generation took: " + (new Date().getTime() - time) + "ms");
+	  }
+
+	  function resizeButtons() {
+          var wPx = (btnW -  2*btnMarginPx) + "px";
+          var hPx = (btnH -  2*btnMarginPx) + "px";
+          var fontPx = C.fontSize || ((btnH -  2*btnMarginPx)/2) + "px";
+          for (var i = C.lowerLimit; i<=C.upperLimit; i++) {
+              var newBtn = document.getElementById(i);
+              newBtn.style.width = wPx;
+              newBtn.style.height = hPx;
+              newBtn.style.fontSize = fontPx;
+          }
+      }
+
+	  function markButtons(clickedAmounts) {
+          for (var i = C.lowerLimit; i<=C.upperLimit; i++) {
+              var btn = document.getElementById(i);
+              if(C.doneAmounts.indexOf(i) !== -1) {
+                  btn.classList.add('done');
+              } else if (clickedAmounts.indexOf(i) !== -1) {
+                  btn.classList.add('clicked');
+              } else {
+                  btn.classList.remove('clicked');
+              }
+          }
+      }
+	  
+  </script>
+</body>
+</html>
